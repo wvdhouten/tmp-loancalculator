@@ -1,0 +1,92 @@
+﻿@page "/loandata"
+@using LoanApp.Core
+@attribute [StreamRendering(true)]
+@attribute [OutputCache(Duration = 5)]
+@inject LoanCalculator LoanCalculator
+@rendermode InteractiveServer
+
+<PageTitle>Loan Data</PageTitle>
+
+<form>
+    <div class="input-group row">
+        <label class="col-sm-2 col-form-label">Loan Amount</label>
+        <div class="col-sm-10">
+            <input class="form-control-sm" @bind="parameters.Amount" />
+        </div>
+    </div>
+    <div class="input-group row">
+        <label class="col-sm-2 col-form-label">Loan Term</label>
+        <div class="col-sm-10">
+            <input class="form-control-sm" @bind="parameters.Terms" />
+        </div>
+    </div>
+    <div class="input-group row">
+        <label class="col-sm-2 col-form-label">Interest Rate</label>
+        <div class="col-sm-10">
+            <input class="form-control-sm" @bind="parameters.InterestRate" />
+        </div>
+    </div>
+    <div class="input-group row">
+        <label class="col-sm-2 col-form-label">Total Paid</label>
+        <div class="col-sm-10">
+            @details?.TotalPaid.ToString("N")
+        </div>
+    </div>
+</form>
+
+<button class="btn btn-primary" @onclick="Calculate">Calculate</button>
+
+@if (details is not null)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Period</th>
+                <th>Date</th>
+                <th>Payment</th>
+                <th>Interest</th>
+                <th>Principal</th>
+                <th>Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var payment in details.Payments)
+            {
+                <tr>
+                    <td>@(payment.Period?.ToString() ?? string.Empty)</td>
+                    <td>@payment.Date.ToString("yyyy-MM-dd")</td>
+                    <td>@payment.Payment.ToString("N")</td>
+                    <td>@payment.Interest.ToString("N")</td>
+                    <td>@payment.Principal.ToString("N")</td>
+                    <td>@payment.Balance.ToString("N")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private LoanParameters parameters = new LoanParameters { Amount = 200000, Terms = 360, InterestRate = 6 };
+
+    private LoanDetails? details = null;
+
+    protected override Task OnInitializedAsync()
+    {
+        details = LoanCalculator.Calculate(parameters);
+
+        return Task.CompletedTask;
+    }
+
+    private void Calculate()
+    {
+        parameters.ExtraPayments.Clear();
+        parameters.ExtraPayments.Add(new ExtraPayment
+        {
+            Amount = 5000,
+            Date = DateOnly.FromDateTime(DateTime.Now.AddMonths(12)),
+            Type = ExtraPayment.PaymentType.Duration
+        });
+
+        details = LoanCalculator.Calculate(parameters);
+    }
+}
